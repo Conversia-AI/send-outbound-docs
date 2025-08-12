@@ -120,10 +120,8 @@ Este endpoint envía un mensaje a un contacto (por ejemplo, una plantilla de Wha
 **Body (Schema)**
 -   `integration_id`: `string` (Requerido. ID de la integración configurada, ej. WhatsApp).
 -   `contact_id`: `string | number` (Requerido. **Debe ser el `ref_id` del contacto**).
--   `data`: `object` (Opcional. Variables para la plantilla del mensaje).
-    -   **Formato 1 (Objeto indexado):** `"data": { "1": "Juan", "2": "ABC-123" }`
-    -   **Formato 2 (Aplanado):** `"data.name": "Juan", "data.order_id": "ABC-123"`
-    -   **Formato 3 (Ordenado con sufijo, recomendado):** `"data": { "data.name:1": "Juan", "data.order_id:2": "ABC-123" }`
+-   Uso de las Variables para la plantilla del mensaje.
+    -   **(Ordenado con prefijo, recomendado, el sufijo depende de la plantilla):** `"data.name:1": "Juan", "data.order_id:2": "ABC-123"`
 
 **Importante:**
 -   El sistema buscará al contacto por su `ref_id` (`contact_id`) dentro de la misma `org_unit_id` a la que pertenece la `integration_id`.
@@ -138,10 +136,8 @@ Content-Type: application/json
 {
   "integration_id": "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60",
   "contact_id": "1723489023456789",
-  "data": {
-    "data.full_name:1": "María",
-    "data.order_code:2": "ORD-7788"
-  }
+  "data.full_name:1": "María",
+  "data.order_code:2": "ORD-7788"
 }
 ```
 
@@ -153,10 +149,8 @@ curl -X POST 'https://tu-dominio/api/v1/outbound/send' \
 --data-raw '{
   "integration_id": "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60",
   "contact_id": "1723489023456789",
-  "data": {
-    "data.full_name:1": "María",
-    "data.order_code:2": "ORD-7788"
-  }
+  "data.full_name:1": "María",
+  "data.order_code:2": "ORD-7788"
 }'
 ```
 
@@ -267,11 +261,9 @@ async function main() {
     const outboundPayload: SendOutboundPayload = {
       integration_id: WHATSAPP_INTEGRATION_ID,
       contact_id: contactRefId, // Usamos el ref_id obtenido
-      data: {
-        // Usando el formato recomendado con sufijo de orden
+        // Usando el formato recomendado acorde al template
         "data.nombre_cliente:1": newContact.name.split(" ")[0], // "Juan"
-        "data.numero_ticket:2": `TICKET-${Math.floor(Math.random() * 10000)}`,
-      },
+        "data.numero_ticket:2": `TICKET-${Math.floor(Math.random() * 10000)}`
     };
 
     console.log(`\n2. Enviando mensaje outbound al contacto ${contactRefId}...`);
