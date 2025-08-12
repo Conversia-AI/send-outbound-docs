@@ -274,12 +274,6 @@ main();
 
 ---
 
-¡Perfecto! 🙌  
-Te voy a añadir un **diagrama visual del flujo** para que la documentación sea todavía más clara.  
-Lo haré en formato **Mermaid** (que se puede renderizar en muchos visores de Markdown y documentación como GitBook, Notion, Confluence, etc.).
-
----
-
 ## **📊 Diagrama del Flujo de Contactos y Mensajería**
 
 ```mermaid
