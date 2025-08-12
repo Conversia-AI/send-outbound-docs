@@ -38,7 +38,7 @@ POST https://engine.conversia.ai/api/v1/contacts
 |-------|------|-------------|-------------|
 | `name` | string | ✅ | Nombre del contacto |
 | `email` | string | ❌ | Email válido |
-| `phone` | string | ❌ | Formato internacional recomendado (+54...) |
+| `phone` | string | ❌ | Formato internacional obligatorio (+51...), dentro de nuestro api no es necesario, pero para este caso de uso es obligatiorio mandar el número. |
 | `company` | string | ❌ | Empresa |
 | `ref_id` | string | ❌ | Identificador único (alfanumérico con `-_`) |
 | `auto_generate_ref_id` | boolean | ❌ | Si es `true`, el sistema genera un `ref_id` único |
