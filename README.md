@@ -1,50 +1,58 @@
-### **Documentación de API: Contactos y Mensajería**
+# **API de Contactos y Mensajería**
 
-Esta documentación detalla los endpoints para crear contactos y enviar mensajes outbound, junto con un flujo de trabajo completo.
-
-**Resumen del Flujo:**
-1.  **Crear un Contacto:** Envía una petición `POST` a `/api/v1/contacts` para registrar un nuevo contacto. Puedes proporcionar tu propio `ref_id` o dejar que el sistema genere uno.
-2.  **Obtener `ref_id`:** De la respuesta de creación, extrae el `ref_id` del contacto.
-3.  **Enviar Mensaje Outbound:** Envía una petición `POST` a `/api/v1/outbound/send`, usando el `integration_id` de tu canal (ej. WhatsApp) y el `ref_id` del contacto como `contact_id`.
+Esta API permite **crear contactos** y **enviar mensajes outbound** (por ejemplo, plantillas de WhatsApp) a través de integraciones configuradas.
 
 ---
 
-### **1. Crear Contacto (`POST /api/v1/contacts`)**
+## **Flujo General de Uso**
+1. **Crear un contacto** → `POST /api/v1/contacts`  
+   - Puedes enviar tu propio `ref_id` o dejar que el sistema lo genere automáticamente.
+2. **Obtener el `ref_id`** del contacto creado.
+3. **Enviar un mensaje outbound** → `POST /api/v1/outbound/send`  
+   - Usando el `integration_id` de tu canal (ej. WhatsApp) y el `ref_id` como `contact_id`.
 
-Este endpoint permite crear un nuevo contacto en una unidad organizacional específica.
+---
 
-**Endpoint**
-`POST /api/v1/contacts`
+## **1. Crear Contacto**
+**Endpoint:**  
+```
+POST https://engine.conversia.ai/api/v1/contacts
+```
 
-**Autenticación**
--   **Header (Requerido):** `X-API-KEY: <tu_api_key>`
--   **Unidad Organizacional (org unit):**
-    -   **Header (Preferente):** `X-API-ORGUNIT-ID: <uuid>`
-    -   **Body (Alternativa):** `org_unit_id: <uuid>`
+**Autenticación:**
+- **Header obligatorio:**  
+  `X-API-KEY: <tu_api_key>`
+- **Unidad Organizacional (`org_unit_id`):**  
+  - **Recomendado:** `X-API-ORGUNIT-ID: <uuid>` en el header  
+  - **Alternativa:** `org_unit_id` en el body
 
-**Headers**
--   `X-API-KEY: string`
--   `X-API-ORGUNIT-ID: uuid` (Opcional si se envía en el body)
--   `Content-Type: application/json`
+**Headers requeridos:**
+| Header | Tipo | Obligatorio | Descripción |
+|--------|------|-------------|-------------|
+| `X-API-KEY` | string | ✅ | Tu API Key |
+| `X-API-ORGUNIT-ID` | uuid | ⚠️ | Obligatorio si no se envía en el body |
+| `Content-Type` | string | ✅ | `application/json` |
 
-**Body (Schema)**
--   `name`: `string` (Requerido)
--   `email`: `string` (Opcional, debe ser un email válido)
--   `phone`: `string` (Opcional, se recomienda formato internacional con código de país)
--   `company`: `string` (Opcional)
--   `ref_id`: `string` (Opcional, identificador único alfanumérico con `-_`. Si no se envía, se puede autogenerar)
--   `auto_generate_ref_id`: `boolean` (Opcional. Si es `true`, el sistema genera un `ref_id` numérico único y de alta precisión, ignorando cualquier `ref_id` enviado)
--   `custom_fields`: `object` (Opcional, hasta 100 claves personalizadas)
--   `org_unit_id`: `uuid` (Opcional si se proveyó en el header)
+**Body (JSON):**
+| Campo | Tipo | Obligatorio | Descripción |
+|-------|------|-------------|-------------|
+| `name` | string | ✅ | Nombre del contacto |
+| `email` | string | ❌ | Email válido |
+| `phone` | string | ❌ | Formato internacional recomendado (+54...) |
+| `company` | string | ❌ | Empresa |
+| `ref_id` | string | ❌ | Identificador único (alfanumérico con `-_`) |
+| `auto_generate_ref_id` | boolean | ❌ | Si es `true`, el sistema genera un `ref_id` único |
+| `custom_fields` | object | ❌ | Hasta 100 campos personalizados |
+| `org_unit_id` | uuid | ❌ | Solo si no se envía en el header |
 
-**Notas de Validación:**
--   `name` es obligatorio y no puede contener solo espacios.
--   `ref_id`, si se envía, debe ser único por `org_unit_id` para poder localizar el contacto posteriormente.
--   `email` y `phone` son validados y normalizados internamente.
+**Notas:**
+- `name` no puede estar vacío ni contener solo espacios.
+- `ref_id` debe ser único por `org_unit_id`.
+- `email` y `phone` se validan y normalizan automáticamente.
 
-#### **Ejemplo de Request (HTTP)**
+**Ejemplo HTTP:**
 ```http
-POST https://tu-dominio/api/v1/contacts
+POST https://engine.conversia.ai/api/v1/contacts
 X-API-KEY: {{API_KEY}}
 X-API-ORGUNIT-ID: 11111111-2222-3333-4444-555555555555
 Content-Type: application/json
@@ -62,10 +70,10 @@ Content-Type: application/json
 }
 ```
 
-#### **Ejemplo en cURL**
+**Ejemplo cURL:**
 ```bash
-curl -X POST 'https://tu-dominio/api/v1/contacts' \
---header 'X-API-KEY: tu_api_key_aqui' \
+curl -X POST 'https://engine.conversia.ai/api/v1/contacts' \
+--header 'X-API-KEY: {{API_KEY}}' \
 --header 'X-API-ORGUNIT-ID: 11111111-2222-3333-4444-555555555555' \
 --header 'Content-Type: application/json' \
 --data-raw '{
@@ -81,7 +89,7 @@ curl -X POST 'https://tu-dominio/api/v1/contacts' \
 }'
 ```
 
-#### **Respuesta Exitosa (201 Created)**
+**Respuesta (201 Created):**
 ```json
 {
   "id": "c0f8b0f1-7d1c-4f3a-9f42-21b8a6f1e9a1",
@@ -103,33 +111,36 @@ curl -X POST 'https://tu-dominio/api/v1/contacts' \
 
 ---
 
-### **2. Enviar Mensaje Outbound (`POST /api/v1/outbound/send`)**
+## **2. Enviar Mensaje Outbound**
+**Endpoint:**  
+```
+POST https://engine.conversia.ai/api/v1/outbound/send
+```
 
-Este endpoint envía un mensaje a un contacto (por ejemplo, una plantilla de WhatsApp) a través de una integración específica.
+**Autenticación:**
+- **Header obligatorio:**  
+  `X-API-KEY: <tu_api_key>`
 
-**Endpoint**
-`POST /api/v1/outbound/send`
+**Headers requeridos:**
+| Header | Tipo | Obligatorio |
+|--------|------|-------------|
+| `X-API-KEY` | string | ✅ |
+| `Content-Type` | string | ✅ (`application/json`) |
 
-**Autenticación**
--   **Header (Requerido):** `X-API-KEY: <tu_api_key>`
-
-**Headers**
--   `X-API-KEY: string`
--   `Content-Type: application/json`
-
-**Body (Schema)**
--   `integration_id`: `string` (Requerido. ID de la integración configurada, ej. WhatsApp).
--   `contact_id`: `string | number` (Requerido. **Debe ser el `ref_id` del contacto**).
--   Uso de las Variables para la plantilla del mensaje.
-    -   **(Ordenado con prefijo, recomendado, el sufijo depende de la plantilla):** `"data.name:1": "Juan", "data.order_id:2": "ABC-123"`
+**Body (JSON):**
+| Campo | Tipo | Obligatorio | Descripción |
+|-------|------|-------------|-------------|
+| `integration_id` | string | ✅ | ID de la integración (ej. WhatsApp) |
+| `contact_id` | string/number | ✅ | **Debe ser el `ref_id` del contacto** |
+| Variables de plantilla | string | ❌ | Ej: `"data.name:1": "Juan"` |
 
 **Importante:**
--   El sistema buscará al contacto por su `ref_id` (`contact_id`) dentro de la misma `org_unit_id` a la que pertenece la `integration_id`.
--   No mezcles los formatos de `data` en una misma petición.
+- El sistema busca el contacto por `ref_id` dentro de la misma `org_unit_id` asociada a la `integration_id`.
+- No mezclar formatos de `data` en la misma petición.
 
-#### **Ejemplo de Request (HTTP)**
+**Ejemplo HTTP:**
 ```http
-POST https://tu-dominio/api/v1/outbound/send
+POST https://engine.conversia.ai/api/v1/outbound/send
 X-API-KEY: {{API_KEY}}
 Content-Type: application/json
 
@@ -141,10 +152,10 @@ Content-Type: application/json
 }
 ```
 
-#### **Ejemplo en cURL**
+**Ejemplo cURL:**
 ```bash
-curl -X POST 'https://tu-dominio/api/v1/outbound/send' \
---header 'X-API-KEY: tu_api_key_aqui' \
+curl -X POST 'https://engine.conversia.ai/api/v1/outbound/send' \
+--header 'X-API-KEY: {{API_KEY}}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
   "integration_id": "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60",
@@ -154,7 +165,7 @@ curl -X POST 'https://tu-dominio/api/v1/outbound/send' \
 }'
 ```
 
-#### **Respuesta Exitosa (200 OK)**
+**Respuesta (200 OK):**
 ```json
 {
   "success": true,
@@ -166,36 +177,29 @@ curl -X POST 'https://tu-dominio/api/v1/outbound/send' \
 
 ---
 
-### **3. Ejemplo de Implementación en TypeScript**
-
-A continuación se muestra un ejemplo completo en TypeScript que utiliza `axios` para realizar el flujo de crear un contacto y luego enviarle un mensaje outbound.
+## **3. Ejemplo Completo en TypeScript**
+Este script crea un contacto y luego le envía un mensaje outbound.
 
 **Pre-requisitos:**
--   Node.js y npm/yarn instalados.
--   Instalar las dependencias: `npm install axios typescript ts-node @types/node`
+```bash
+npm install axios typescript ts-node @types/node
+```
 
-**Código (`run-flow.ts`)**
+**Código (`run-flow.ts`):**
 ```typescript
 import axios, { AxiosInstance } from "axios";
 
-// --- Configuración ---
-const API_BASE_URL = "https://tu-dominio/api/v1";
+const API_BASE_URL = "https://engine.conversia.ai/api/v1";
 const API_KEY = process.env.API_KEY || "tu_api_key_aqui";
 const ORG_UNIT_ID = "11111111-2222-3333-4444-555555555555";
 const WHATSAPP_INTEGRATION_ID = "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60";
-
-// --- Definición de Tipos (Interfaces) ---
-interface CustomFields {
-  [key: string]: any;
-}
 
 interface CreateContactPayload {
   name: string;
   phone: string;
   email?: string;
-  ref_id?: string;
   auto_generate_ref_id?: boolean;
-  custom_fields?: CustomFields;
+  custom_fields?: Record<string, any>;
 }
 
 interface ContactResponse {
@@ -203,23 +207,14 @@ interface ContactResponse {
   ref_id: string;
   name: string;
   phone: string;
-  [key: string]: any;
 }
 
 interface SendOutboundPayload {
   integration_id: string;
-  contact_id: string | number; // Este es el ref_id del contacto
-  data?: { [key: string]: any };
-}
-
-interface SendOutboundResponse {
-  success: boolean;
-  message: string;
-  integration_id: string;
   contact_id: string | number;
+  [key: string]: any;
 }
 
-// --- Cliente de API ---
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -228,68 +223,80 @@ const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// --- Flujo Principal ---
 async function main() {
-  console.log("🚀 Iniciando flujo: Crear contacto y enviar outbound...");
-
   try {
-    // --- Paso 1: Crear el Contacto ---
+    console.log("🚀 Creando contacto...");
     const contactPayload: CreateContactPayload = {
       name: "Juan Pérez",
       phone: "+52 1 55 9876 5432",
       email: "juan.perez@example.com",
-      auto_generate_ref_id: true, // Dejamos que el sistema genere el ref_id
-      custom_fields: {
-        lead_source: "api_example",
-      },
+      auto_generate_ref_id: true,
+      custom_fields: { lead_source: "api_example" },
     };
 
-    console.log("\n1. Creando contacto...");
     const { data: newContact } = await apiClient.post<ContactResponse>(
       "/contacts",
       contactPayload,
       { headers: { "X-API-ORGUNIT-ID": ORG_UNIT_ID } }
     );
 
-    console.log("✅ Contacto creado con éxito!");
-    console.log(`   - ID Interno: ${newContact.id}`);
-    console.log(`   - Ref ID: ${newContact.ref_id}`);
+    console.log(`✅ Contacto creado: Ref ID = ${newContact.ref_id}`);
 
-    const contactRefId = newContact.ref_id;
-
-    // --- Paso 2: Enviar Mensaje Outbound ---
+    console.log("📤 Enviando mensaje outbound...");
     const outboundPayload: SendOutboundPayload = {
       integration_id: WHATSAPP_INTEGRATION_ID,
-      contact_id: contactRefId, // Usamos el ref_id obtenido
-        // Usando el formato recomendado acorde al template
-        "data.nombre_cliente:1": newContact.name.split(" ")[0], // "Juan"
-        "data.numero_ticket:2": `TICKET-${Math.floor(Math.random() * 10000)}`
+      contact_id: newContact.ref_id,
+      "data.nombre_cliente:1": newContact.name.split(" ")[0],
+      "data.numero_ticket:2": `TICKET-${Math.floor(Math.random() * 10000)}`,
     };
 
-    console.log(`\n2. Enviando mensaje outbound al contacto ${contactRefId}...`);
-    const { data: outboundResponse } =
-      await apiClient.post<SendOutboundResponse>(
-        "/outbound/send",
-        outboundPayload
-      );
+    const { data: outboundResponse } = await apiClient.post(
+      "/outbound/send",
+      outboundPayload
+    );
 
     if (outboundResponse.success) {
       console.log("✅ Mensaje enviado con éxito!");
-      console.log(`   - Mensaje: ${outboundResponse.message}`);
     } else {
-      console.error("❌ Error al enviar el mensaje:", outboundResponse);
+      console.error("❌ Error al enviar mensaje:", outboundResponse);
     }
   } catch (error) {
-    console.error("\n❌ Ocurrió un error durante el flujo:");
     if (axios.isAxiosError(error)) {
-      console.error(`   - Status: ${error.response?.status}`);
-      console.error(`   - Data: ${JSON.stringify(error.response?.data)}`);
+      console.error("Error:", error.response?.status, error.response?.data);
     } else {
       console.error(error);
     }
   }
 }
 
-// Ejecutar el flujo
 main();
 ```
+
+---
+
+¡Perfecto! 🙌  
+Te voy a añadir un **diagrama visual del flujo** para que la documentación sea todavía más clara.  
+Lo haré en formato **Mermaid** (que se puede renderizar en muchos visores de Markdown y documentación como GitBook, Notion, Confluence, etc.).
+
+---
+
+## **📊 Diagrama del Flujo de Contactos y Mensajería**
+
+```mermaid
+flowchart TD
+    A[Inicio] --> B[POST /api/v1/contacts\nCrear contacto]
+    B -->|Respuesta 201| C[Obtener ref_id del contacto]
+    C --> D[POST /api/v1/outbound/send\nEnviar mensaje outbound]
+    D -->|Respuesta 200| E[Mensaje enviado con éxito]
+    D -->|Error| F[Revisar datos o credenciales]
+    E --> G[Fin]
+    F --> G
+```
+
+**Explicación del diagrama:**
+1. **Crear contacto** → Se envía un `POST` a `/contacts` con los datos del contacto.  
+2. **Obtener `ref_id`** → De la respuesta, se extrae el `ref_id` generado o enviado.  
+3. **Enviar mensaje outbound** → Se envía un `POST` a `/outbound/send` usando el `integration_id` y el `ref_id` como `contact_id`.  
+4. **Respuesta exitosa** → El mensaje se envió correctamente.  
+5. **Error** → Revisar credenciales, `integration_id` o `ref_id`.
+
