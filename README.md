@@ -38,17 +38,12 @@ POST https://engine.conversia.ai/api/v1/contacts
 |-------|------|-------------|-------------|
 | `name` | string | ✅ | Nombre del contacto |
 | `email` | string | ❌ | Email válido |
-| `phone` | string | ❌ | Formato internacional obligatorio (+51...), dentro de nuestro api no es necesario, pero para este caso de uso es obligatiorio mandar el número. |
+| `phone` | string | ❌ | Formato internacional obligatorio (+51...) |
 | `company` | string | ❌ | Empresa |
 | `ref_id` | string | ❌ | Identificador único (alfanumérico con `-_`) |
 | `auto_generate_ref_id` | boolean | ❌ | Si es `true`, el sistema genera un `ref_id` único |
 | `custom_fields` | object | ❌ | Hasta 100 campos personalizados |
 | `org_unit_id` | uuid | ❌ | Solo si no se envía en el header |
-
-**Notas:**
-- `name` no puede estar vacío ni contener solo espacios.
-- `ref_id` debe ser único por `org_unit_id`.
-- `email` y `phone` se validan y normalizan automáticamente.
 
 **Ejemplo HTTP:**
 ```http
@@ -97,7 +92,7 @@ curl -X POST 'https://engine.conversia.ai/api/v1/contacts' \
   "email": "maria@example.com",
   "phone": "5491112345678",
   "company": "Acme SA",
-  "ref_id": "1723489023456789",
+  "ref_id": "1755093321252339",
   "custom_fields": {
     "source": "landing",
     "campaign": "black_friday"
@@ -117,14 +112,9 @@ curl -X POST 'https://engine.conversia.ai/api/v1/contacts' \
 POST https://engine.conversia.ai/api/v1/outbound/send
 ```
 
-**Autenticación:**
-- **Header obligatorio:**  
-  `X-API-KEY: <tu_api_key>`
-
 **Headers requeridos:**
 | Header | Tipo | Obligatorio |
 |--------|------|-------------|
-| `X-API-KEY` | string | ✅ |
 | `Content-Type` | string | ✅ (`application/json`) |
 
 **Body (JSON):**
@@ -134,34 +124,28 @@ POST https://engine.conversia.ai/api/v1/outbound/send
 | `contact_id` | string/number | ✅ | **Debe ser el `ref_id` del contacto** |
 | Variables de plantilla | string | ❌ | Ej: `"data.name:1": "Juan"` |
 
-**Importante:**
-- El sistema busca el contacto por `ref_id` dentro de la misma `org_unit_id` asociada a la `integration_id`.
-- No mezclar formatos de `data` en la misma petición.
-
 **Ejemplo HTTP:**
 ```http
 POST https://engine.conversia.ai/api/v1/outbound/send
-X-API-KEY: {{API_KEY}}
 Content-Type: application/json
 
 {
-  "integration_id": "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60",
-  "contact_id": "1723489023456789",
-  "data.full_name:1": "María",
-  "data.order_code:2": "ORD-7788"
+  "integration_id": "e5738d6a-fb0f-47a5-b6a1-47e62fd90f3a",
+  "contact_id": "1755093321252339",
+  "data.name:1": "María",
+  "data.career:2": "marketing"
 }
 ```
 
 **Ejemplo cURL:**
 ```bash
 curl -X POST 'https://engine.conversia.ai/api/v1/outbound/send' \
---header 'X-API-KEY: {{API_KEY}}' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-  "integration_id": "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60",
-  "contact_id": "1723489023456789",
-  "data.full_name:1": "María",
-  "data.order_code:2": "ORD-7788"
+  "integration_id": "e5738d6a-fb0f-47a5-b6a1-47e62fd90f3a",
+  "contact_id": "1755093321252339",
+  "data.name:1": "María",
+  "data.career:2": "marketing"
 }'
 ```
 
@@ -170,8 +154,8 @@ curl -X POST 'https://engine.conversia.ai/api/v1/outbound/send' \
 {
   "success": true,
   "message": "Outbound message sent successfully",
-  "integration_id": "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60",
-  "contact_id": "1723489023456789"
+  "integration_id": "e5738d6a-fb0f-47a5-b6a1-47e62fd90f3a",
+  "contact_id": "1755093321252339"
 }
 ```
 
@@ -192,7 +176,8 @@ import axios, { AxiosInstance } from "axios";
 const API_BASE_URL = "https://engine.conversia.ai/api/v1";
 const API_KEY = process.env.API_KEY || "tu_api_key_aqui";
 const ORG_UNIT_ID = "11111111-2222-3333-4444-555555555555";
-const WHATSAPP_INTEGRATION_ID = "3f6c1b5e-2a4d-4a89-9c77-1b2c3d4e5f60";
+const WHATSAPP_INTEGRATION_ID =
+  "e5738d6a-fb0f-47a5-b6a1-47e62fd90f3a";
 
 interface CreateContactPayload {
   name: string;
@@ -227,11 +212,11 @@ async function main() {
   try {
     console.log("🚀 Creando contacto...");
     const contactPayload: CreateContactPayload = {
-      name: "Juan Pérez",
-      phone: "+52 1 55 9876 5432",
-      email: "juan.perez@example.com",
+      name: "María Rodríguez",
+      phone: "+54 9 11 1234 5678",
+      email: "maria@example.com",
       auto_generate_ref_id: true,
-      custom_fields: { lead_source: "api_example" },
+      custom_fields: { source: "landing" },
     };
 
     const { data: newContact } = await apiClient.post<ContactResponse>(
@@ -246,8 +231,8 @@ async function main() {
     const outboundPayload: SendOutboundPayload = {
       integration_id: WHATSAPP_INTEGRATION_ID,
       contact_id: newContact.ref_id,
-      "data.nombre_cliente:1": newContact.name.split(" ")[0],
-      "data.numero_ticket:2": `TICKET-${Math.floor(Math.random() * 10000)}`,
+      "data.name:1": "María",
+      "data.career:2": "marketing",
     };
 
     const { data: outboundResponse } = await apiClient.post(
@@ -287,10 +272,6 @@ flowchart TD
     F --> G
 ```
 
-**Explicación del diagrama:**
-1. **Crear contacto** → Se envía un `POST` a `/contacts` con los datos del contacto.  
-2. **Obtener `ref_id`** → De la respuesta, se extrae el `ref_id` generado o enviado.  
-3. **Enviar mensaje outbound** → Se envía un `POST` a `/outbound/send` usando el `integration_id` y el `ref_id` como `contact_id`.  
-4. **Respuesta exitosa** → El mensaje se envió correctamente.  
-5. **Error** → Revisar credenciales, `integration_id` o `ref_id`.
 
+If you want, I can also **add authentication notes** explaining why your `curl` doesn’t have `X-API-KEY` and when it’s required.  
+Do you want me to add that?
