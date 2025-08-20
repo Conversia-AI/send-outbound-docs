@@ -5,25 +5,29 @@ Esta API permite **crear contactos** y **enviar mensajes outbound** (por ejemplo
 ---
 
 ## **Flujo General de Uso**
-1. **Crear un contacto** → `POST /api/v1/contacts`  
+
+1. **Crear un contacto** → `POST /api/v1/contacts`
    - Puedes enviar tu propio `ref_id` o dejar que el sistema lo genere automáticamente.
 2. **Obtener el `ref_id`** del contacto creado.
-3. **Enviar un mensaje outbound** → `POST /api/v1/outbound/send`  
+3. **Enviar un mensaje outbound** → `POST /api/v1/outbound/send`
    - Usando el `integration_id` de tu canal (ej. WhatsApp) y el `ref_id` como `contact_id`.
 
 ---
 
 ## **1. Crear Contacto**
-**Endpoint:**  
+
+**Endpoint:**
+
 ```
 POST https://engine.conversia.ai/api/v1/contacts
 ```
 
 **Autenticación:**
+
 - **Header obligatorio:**  
   `X-API-KEY: <tu_api_key>`
-- **Unidad Organizacional (`org_unit_id`):**  
-  - **Recomendado:** `X-API-ORGUNIT-ID: <uuid>` en el header  
+- **Unidad Organizacional (`org_unit_id`):**
+  - **Recomendado:** `X-API-ORGUNIT-ID: <uuid>` en el header
   - **Alternativa:** `org_unit_id` en el body
 
 **Headers requeridos:**
@@ -46,11 +50,13 @@ POST https://engine.conversia.ai/api/v1/contacts
 | `org_unit_id` | uuid | ❌ | Solo si no se envía en el header |
 
 **Notas:**
+
 - `name` no puede estar vacío ni contener solo espacios.
 - `ref_id` debe ser único por `org_unit_id`.
 - `email` y `phone` se validan y normalizan automáticamente.
 
 **Ejemplo HTTP:**
+
 ```http
 POST https://engine.conversia.ai/api/v1/contacts
 X-API-KEY: {{API_KEY}}
@@ -71,6 +77,7 @@ Content-Type: application/json
 ```
 
 **Ejemplo cURL:**
+
 ```bash
 curl -X POST 'https://engine.conversia.ai/api/v1/contacts' \
 --header 'X-API-KEY: {{API_KEY}}' \
@@ -90,6 +97,7 @@ curl -X POST 'https://engine.conversia.ai/api/v1/contacts' \
 ```
 
 **Respuesta (201 Created):**
+
 ```json
 {
   "id": "c0f8b0f1-7d1c-4f3a-9f42-21b8a6f1e9a1",
@@ -112,12 +120,15 @@ curl -X POST 'https://engine.conversia.ai/api/v1/contacts' \
 ---
 
 ## **2. Enviar Mensaje Outbound**
-**Endpoint:**  
+
+**Endpoint:**
+
 ```
 POST https://engine.conversia.ai/api/v1/outbound/send
 ```
 
 **Autenticación:**
+
 - **Header obligatorio:**  
   `X-API-KEY: <tu_api_key>`
 
@@ -135,10 +146,12 @@ POST https://engine.conversia.ai/api/v1/outbound/send
 | Variables de plantilla | string | ❌ | Ej: `"data.name:1": "Juan"` |
 
 **Importante:**
+
 - El sistema busca el contacto por `ref_id` dentro de la misma `org_unit_id` asociada a la `integration_id`.
 - No mezclar formatos de `data` en la misma petición.
 
 **Ejemplo HTTP:**
+
 ```http
 POST https://engine.conversia.ai/api/v1/outbound/send
 X-API-KEY: {{API_KEY}}
@@ -153,6 +166,7 @@ Content-Type: application/json
 ```
 
 **Ejemplo cURL:**
+
 ```bash
 curl -X POST 'https://engine.conversia.ai/api/v1/outbound/send' \
 --header 'X-API-KEY: {{API_KEY}}' \
@@ -166,6 +180,7 @@ curl -X POST 'https://engine.conversia.ai/api/v1/outbound/send' \
 ```
 
 **Respuesta (200 OK):**
+
 ```json
 {
   "success": true,
@@ -178,14 +193,17 @@ curl -X POST 'https://engine.conversia.ai/api/v1/outbound/send' \
 ---
 
 ## **3. Ejemplo Completo en TypeScript**
+
 Este script crea un contacto y luego le envía un mensaje outbound.
 
 **Pre-requisitos:**
+
 ```bash
 npm install axios typescript ts-node @types/node
 ```
 
 **Código (`run-flow.ts`):**
+
 ```typescript
 import axios, { AxiosInstance } from "axios";
 
@@ -237,7 +255,7 @@ async function main() {
     const { data: newContact } = await apiClient.post<ContactResponse>(
       "/contacts",
       contactPayload,
-      { headers: { "X-API-ORGUNIT-ID": ORG_UNIT_ID } }
+      { headers: { "X-API-ORGUNIT-ID": ORG_UNIT_ID } },
     );
 
     console.log(`✅ Contacto creado: Ref ID = ${newContact.ref_id}`);
@@ -252,7 +270,7 @@ async function main() {
 
     const { data: outboundResponse } = await apiClient.post(
       "/outbound/send",
-      outboundPayload
+      outboundPayload,
     );
 
     if (outboundResponse.success) {
@@ -288,9 +306,9 @@ flowchart TD
 ```
 
 **Explicación del diagrama:**
-1. **Crear contacto** → Se envía un `POST` a `/contacts` con los datos del contacto.  
-2. **Obtener `ref_id`** → De la respuesta, se extrae el `ref_id` generado o enviado.  
-3. **Enviar mensaje outbound** → Se envía un `POST` a `/outbound/send` usando el `integration_id` y el `ref_id` como `contact_id`.  
-4. **Respuesta exitosa** → El mensaje se envió correctamente.  
-5. **Error** → Revisar credenciales, `integration_id` o `ref_id`.
 
+1. **Crear contacto** → Se envía un `POST` a `/contacts` con los datos del contacto.
+2. **Obtener `ref_id`** → De la respuesta, se extrae el `ref_id` generado o enviado.
+3. **Enviar mensaje outbound** → Se envía un `POST` a `/outbound/send` usando el `integration_id` y el `ref_id` como `contact_id`.
+4. **Respuesta exitosa** → El mensaje se envió correctamente.
+5. **Error** → Revisar credenciales, `integration_id` o `ref_id`.
